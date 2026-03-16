@@ -1,6 +1,5 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -76,7 +75,7 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   register,
   login,
 };

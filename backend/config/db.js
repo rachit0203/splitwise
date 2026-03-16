@@ -1,5 +1,4 @@
-const mongoose = require("mongoose");
-
+import mongoose from "mongoose";
 const connectDB = async (mongoUri) => {
   if (!mongoUri) {
     throw new Error("MONGO_URI is missing");
@@ -12,4 +11,4 @@ const connectDB = async (mongoUri) => {
   console.log("MongoDB connected");
 };
 
-module.exports = connectDB;
+export default connectDB;

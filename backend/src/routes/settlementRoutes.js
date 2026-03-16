@@ -1,13 +1,13 @@
-const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
-const {
+import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
+import {
   createSettlement,
   getMySettlementHistory,
-} = require("../controllers/settlementController");
+} from "../controllers/settlementController.js";
 
 const router = express.Router();
 
 router.post("/", authMiddleware, createSettlement);
 router.get("/history/me", authMiddleware, getMySettlementHistory);
 
-module.exports = router;
+export default router;

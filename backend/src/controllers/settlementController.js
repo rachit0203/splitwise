@@ -1,5 +1,4 @@
-const Settlement = require("../models/Settlement");
-
+import Settlement from "../models/Settlement.js";
 const createSettlement = async (req, res) => {
   try {
     const { payer, receiver, amount, groupId } = req.body;
@@ -52,7 +51,7 @@ const getMySettlementHistory = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createSettlement,
   getMySettlementHistory,
 };

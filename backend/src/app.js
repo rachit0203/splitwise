@@ -1,17 +1,15 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-
-const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
-const friendRoutes = require("./routes/friendRoutes");
-const groupRoutes = require("./routes/groupRoutes");
-const expenseRoutes = require("./routes/expenseRoutes");
-const balanceRoutes = require("./routes/balanceRoutes");
-const settlementRoutes = require("./routes/settlementRoutes");
-const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import authRoutes from "./routes/authRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import friendRoutes from "./routes/friendRoutes.js";
+import groupRoutes from "./routes/groupRoutes.js";
+import expenseRoutes from "./routes/expenseRoutes.js";
+import balanceRoutes from "./routes/balanceRoutes.js";
+import settlementRoutes from "./routes/settlementRoutes.js";
+import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 const app = express();
 
 app.use(helmet());
@@ -34,4 +32,4 @@ app.use("/api/settlement", settlementRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

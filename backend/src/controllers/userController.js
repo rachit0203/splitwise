@@ -1,5 +1,4 @@
-const User = require("../models/User");
-
+import User from "../models/User.js";
 const searchUsers = async (req, res) => {
   try {
     const query = (req.query.q || "").trim();
@@ -43,7 +42,7 @@ const getUserById = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   searchUsers,
   getUserById,
 };

@@ -1,5 +1,4 @@
-const mongoose = require("mongoose");
-
+import mongoose from "mongoose";
 const settlementSchema = new mongoose.Schema(
   {
     payer: {
@@ -31,4 +30,4 @@ const settlementSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("Settlement", settlementSchema);
+export default mongoose.model("Settlement", settlementSchema);

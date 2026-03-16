@@ -1,11 +1,11 @@
-const express = require("express");
-const authMiddleware = require("../middleware/authMiddleware");
-const {
+import express from "express";
+import authMiddleware from "../middleware/authMiddleware.js";
+import {
   createGroup,
   getGroupById,
   addMember,
   listMyGroups,
-} = require("../controllers/groupController");
+} from "../controllers/groupController.js";
 
 const router = express.Router();
 
@@ -14,4 +14,4 @@ router.get("/my", authMiddleware, listMyGroups);
 router.get("/:id", authMiddleware, getGroupById);
 router.post("/add-member", authMiddleware, addMember);
 
-module.exports = router;
+export default router;

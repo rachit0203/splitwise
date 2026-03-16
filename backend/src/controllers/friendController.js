@@ -1,6 +1,5 @@
-const FriendRequest = require("../models/FriendRequest");
-const User = require("../models/User");
-
+import FriendRequest from "../models/FriendRequest.js";
+import User from "../models/User.js";
 const sendFriendRequest = async (req, res) => {
   try {
     const { receiverId } = req.body;
@@ -134,7 +133,7 @@ const getFriendList = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   sendFriendRequest,
   acceptOrRejectRequest,
   getFriendList,

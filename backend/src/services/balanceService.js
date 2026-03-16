@@ -1,7 +1,6 @@
-const Expense = require("../models/Expense");
-const Settlement = require("../models/Settlement");
-const User = require("../models/User");
-
+import Expense from "../models/Expense.js";
+import Settlement from "../models/Settlement.js";
+import User from "../models/User.js";
 const toTwoDecimals = (value) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
@@ -141,7 +140,7 @@ const calculateUserBalances = async (userId) => {
   };
 };
 
-module.exports = {
+export {
   calculateUserBalances,
   getParticipantShare,
   toTwoDecimals,

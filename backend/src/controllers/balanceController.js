@@ -1,5 +1,4 @@
-const { calculateUserBalances } = require("../services/balanceService");
-
+import { calculateUserBalances } from "../services/balanceService.js";
 const getUserBalance = async (req, res) => {
   try {
     const { id } = req.params;
@@ -19,6 +18,6 @@ const getUserBalance = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   getUserBalance,
 };

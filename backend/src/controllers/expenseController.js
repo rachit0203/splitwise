@@ -1,9 +1,9 @@
-const Expense = require("../models/Expense");
-const Group = require("../models/Group");
-const {
+import Expense from "../models/Expense.js";
+import Group from "../models/Group.js";
+import {
   getParticipantShare,
   toTwoDecimals,
-} = require("../services/balanceService");
+} from "../services/balanceService.js";
 
 const validateAndNormalizeParticipants = (splitType, amount, participants) => {
   if (!Array.isArray(participants) || participants.length === 0) {
@@ -242,7 +242,7 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createExpense,
   getExpensesByGroup,
   updateExpense,

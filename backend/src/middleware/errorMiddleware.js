@@ -14,7 +14,7 @@ const errorHandler = (err, _req, res, _next) => {
   });
 };
 
-module.exports = {
+export {
   notFound,
   errorHandler,
 };
