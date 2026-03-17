@@ -1,132 +1,71 @@
-import React, { useState } from "react";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { SignUp } from "@clerk/clerk-expo/web";
 import { Ionicons } from "@expo/vector-icons";
-import ScreenContainer from "../components/ScreenContainer";
-import Input from "../components/Input";
-import PrimaryButton from "../components/PrimaryButton";
-import { useAuth } from "../context/AuthContext";
-import { colors, fontSize, spacing, borderRadius, shadow } from "../utils/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, radius, spacing, textStyles } from "../src/theme";
 
-export default function RegisterScreen({ navigation }) {
-  const { register } = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const onRegister = async () => {
-    if (!name.trim() || !email.trim() || !password) {
-      Alert.alert("Missing fields", "Please fill in all fields");
-      return;
-    }
-    try {
-      setLoading(true);
-      await register(name.trim(), email.trim(), password);
-    } catch (error) {
-      Alert.alert(
-        "Registration failed",
-        error?.response?.data?.message || "Please try again",
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+export default function RegisterScreen() {
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScreenContainer scroll={false} style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top + spacing.screenV }]}>
       <View style={styles.container}>
-        {/* Logo */}
         <View style={styles.logoWrap}>
           <View style={styles.logoCircle}>
-            <Ionicons name="person-add" size={32} color="#fff" />
+            <Ionicons name="person-add" size={26} color={colors.white} />
           </View>
-          <Text style={styles.heading}>Create Account</Text>
-          <Text style={styles.tagline}>Join and start splitting expenses</Text>
+          <Text style={textStyles.h1}>Create account</Text>
+          <Text style={[textStyles.small, styles.tagline]}>
+            Join and start splitting expenses
+          </Text>
         </View>
 
-        {/* Card */}
         <View style={styles.card}>
-          <Input
-            icon="person-outline"
-            value={name}
-            onChangeText={setName}
-            placeholder="Full name"
-          />
-          <Input
-            icon="mail-outline"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email address"
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <Input
-            icon="lock-closed-outline"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password (min 6 characters)"
-            secureTextEntry
-          />
-
-          <View style={styles.btnGap}>
-            <PrimaryButton
-              title={loading ? "Creating account..." : "Register"}
-              icon="checkmark-circle-outline"
-              onPress={onRegister}
-              disabled={loading}
-            />
-          </View>
-          <View style={styles.btnGap}>
-            <PrimaryButton
-              title="Already have an account? Login"
-              type="outline"
-              onPress={() => navigation.goBack()}
-            />
+          <View style={styles.clerkWrap}>
+            <SignUp />
           </View>
         </View>
       </View>
-    </ScreenContainer>
+      <View style={{ paddingBottom: insets.bottom + spacing.screenV }} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
-    justifyContent: "center",
+    flex: 1,
+    backgroundColor: colors.bgScreen,
+    paddingHorizontal: spacing.screenH,
   },
   container: {
-    width: "100%",
+    flex: 1,
+    justifyContent: "center",
+    gap: spacing.gap,
   },
   logoWrap: {
     alignItems: "center",
-    marginBottom: spacing.xxl,
+    gap: spacing.itemGap,
   },
   logoCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: colors.secondary,
-    justifyContent: "center",
+    width: 64,
+    height: 64,
+    borderRadius: radius.full,
+    backgroundColor: colors.accent,
     alignItems: "center",
-    marginBottom: spacing.md,
-    ...shadow.md,
-  },
-  heading: {
-    fontSize: fontSize.hero,
-    fontWeight: "800",
-    color: colors.text,
+    justifyContent: "center",
   },
   tagline: {
-    fontSize: fontSize.sm,
-    color: colors.subtext,
-    marginTop: spacing.xs,
+    textAlign: "center",
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    ...shadow.sm,
+    backgroundColor: colors.bgSurface,
+    borderRadius: radius.xl,
+    padding: spacing.cardPad,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  btnGap: {
-    marginTop: spacing.sm,
+  clerkWrap: {
+    marginTop: spacing.itemGap,
   },
 });

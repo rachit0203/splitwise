@@ -2,7 +2,8 @@
   "build": {
     "preview": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://splitwise-backend-snkw.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://splitwise-backend-snkw.onrender.com",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZGVzaXJlZC1jaXZldC05Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       },
       "android": {
         "buildType": "apk"
@@ -10,7 +11,8 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://splitwise-backend-snkw.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://splitwise-backend-snkw.onrender.com",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_ZGVzaXJlZC1jaXZldC05Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       }
     }
   }

@@ -1,9 +1,11 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
-import { searchUsers, getUserById } from "../controllers/userController.js";
+import requireAuth from "../middleware/requireAuth.js";
+import { getMe, searchUsers, getUserById } from "../controllers/userController.js";
+
 const router = express.Router();
 
-router.get("/search", authMiddleware, searchUsers);
-router.get("/:id", authMiddleware, getUserById);
+router.get("/me", requireAuth, getMe);
+router.get("/search", requireAuth, searchUsers);
+router.get("/:id", requireAuth, getUserById);
 
 export default router;

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
@@ -31,7 +31,12 @@ export default function DashboardScreen({ navigation }) {
         API.get("/api/groups/my"),
       ]);
 
-      setSummary(balanceRes.data.summary);
+      const s = balanceRes.data.summary || {};
+      setSummary({
+        totalBalance: Number(s.totalBalance) || 0,
+        youOwe: Number(s.youOwe) || 0,
+        youAreOwed: Number(s.youAreOwed) || 0,
+      });
       setSimplified(balanceRes.data.simplified || []);
 
       const groups = groupsRes.data.groups || [];
@@ -107,8 +112,8 @@ export default function DashboardScreen({ navigation }) {
               <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
               {"  "}Who Owes Whom
             </Text>
-            {simplified.map((line) => (
-              <Text key={line} style={styles.simplifiedLine}>
+            {simplified.map((line, idx) => (
+              <Text key={`simplified-${idx}`} style={styles.simplifiedLine}>
                 {line}
               </Text>
             ))}
@@ -122,19 +127,12 @@ export default function DashboardScreen({ navigation }) {
             {"  "}Recent Expenses
           </Text>
 
-          <FlatList
-            data={recentExpenses}
-            keyExtractor={(item) => item._id}
-            scrollEnabled={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-            renderItem={({ item }) => (
+          {recentExpenses.length === 0 ? (
+            <Text style={styles.empty}>No expenses yet — add one!</Text>
+          ) : (
+            recentExpenses.map((item) => (
               <ExpenseCard
+                key={item._id}
                 expense={item}
                 onPress={() =>
                   navigation.navigate("ExpenseDetails", {
@@ -142,11 +140,8 @@ export default function DashboardScreen({ navigation }) {
                   })
                 }
               />
-            )}
-            ListEmptyComponent={
-              <Text style={styles.empty}>No expenses yet — add one!</Text>
-            }
-          />
+            ))
+          )}
         </View>
       </ScreenContainer>
 

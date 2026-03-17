@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import { Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, borderRadius, fontSize, spacing } from "../utils/theme";
 
@@ -13,6 +13,7 @@ export default function Input({
   keyboardType,
   autoCapitalize,
   multiline,
+  editable,
   style,
 }) {
   return (
@@ -34,9 +35,14 @@ export default function Input({
           placeholderTextColor={colors.placeholder}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
+          autoCapitalize={autoCapitalize ?? "sentences"}
           multiline={multiline}
-          style={[styles.input, icon && styles.inputWithIcon]}
+          editable={editable}
+          style={[
+            styles.input,
+            icon && styles.inputWithIcon,
+            Platform.OS === "web" && { outlineStyle: "none" },
+          ]}
         />
       </View>
     </View>

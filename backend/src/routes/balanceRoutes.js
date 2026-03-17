@@ -1,8 +1,8 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import { getUserBalance } from "../controllers/balanceController.js";
 const router = express.Router();
 
-router.get("/user/:id", authMiddleware, getUserBalance);
+router.get("/user/:id", requireAuth, getUserBalance);
 
 export default router;

@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import {
   createGroup,
   getGroupById,
@@ -9,9 +9,9 @@ import {
 
 const router = express.Router();
 
-router.post("/create", authMiddleware, createGroup);
-router.get("/my", authMiddleware, listMyGroups);
-router.get("/:id", authMiddleware, getGroupById);
-router.post("/add-member", authMiddleware, addMember);
+router.post("/create", requireAuth, createGroup);
+router.get("/my", requireAuth, listMyGroups);
+router.get("/:id", requireAuth, getGroupById);
+router.post("/add-member", requireAuth, addMember);
 
 export default router;

@@ -3,91 +3,78 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import * as SecureStore from "expo-secure-store";
+import { useAuth as useClerkAuth, useUser } from "@clerk/clerk-expo";
 import API from "../services/api";
 
 const AuthContext = createContext(null);
 
+/**
+ * Bridges Clerk ↔ backend DB.
+ * After Clerk sign-in, fetches the MongoDB user via /api/users/me.
+ * The requireAuth middleware auto-creates the user if it doesn't exist.
+ */
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { isSignedIn, isLoaded, getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
+  const [dbUser, setDbUser] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const lastSyncAttemptRef = useRef(null);
 
   useEffect(() => {
-    const restoreSession = async () => {
-      try {
-        const storedToken = await SecureStore.getItemAsync("authToken");
-        const storedUser = await SecureStore.getItemAsync("authUser");
+    const clerkUserId = clerkUser?.id || null;
 
-        if (storedToken && storedUser) {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      setDbUser(null);
+      lastSyncAttemptRef.current = null;
+      return;
+    }
+
+    if (!clerkUserId || lastSyncAttemptRef.current === clerkUserId) return;
+
+    const syncUser = async () => {
+      try {
+        setSyncing(true);
+        const token = await getToken();
+        if (!token) {
+          console.warn("No Clerk token available for sync.");
+          return;
         }
+
+        lastSyncAttemptRef.current = clerkUserId;
+        const { data } = await API.get("/api/users/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setDbUser(data.user);
       } catch (e) {
-        // SecureStore not available (e.g. web) – skip session restore
-        console.warn("Could not restore session:", e.message);
+        console.warn("Sync user error:", e.message);
+        setDbUser({
+          _id: null,
+          name:
+            [clerkUser.firstName, clerkUser.lastName]
+              .filter(Boolean)
+              .join(" ") || "User",
+          email: clerkUser.emailAddresses?.[0]?.emailAddress || "",
+        });
       } finally {
-        setLoading(false);
+        setSyncing(false);
       }
     };
 
-    restoreSession();
-  }, []);
-
-  const login = async (email, password) => {
-    const { data } = await API.post("/api/auth/login", { email, password });
-    try {
-      await SecureStore.setItemAsync("authToken", data.token);
-      await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
-    } catch (e) {
-      console.warn("Could not persist session:", e.message);
-    }
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  };
-
-  const register = async (name, email, password) => {
-    const { data } = await API.post("/api/auth/register", {
-      name,
-      email,
-      password,
-    });
-    try {
-      await SecureStore.setItemAsync("authToken", data.token);
-      await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
-    } catch (e) {
-      console.warn("Could not persist session:", e.message);
-    }
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  };
-
-  const logout = async () => {
-    try {
-      await SecureStore.deleteItemAsync("authToken");
-      await SecureStore.deleteItemAsync("authUser");
-    } catch (e) {
-      console.warn("Could not clear session:", e.message);
-    }
-    setToken(null);
-    setUser(null);
-  };
+    syncUser();
+  }, [isLoaded, isSignedIn, clerkUser, getToken]);
 
   const value = useMemo(
     () => ({
-      user,
-      token,
-      loading,
-      isAuthenticated: Boolean(token),
-      login,
-      register,
-      logout,
+      user: dbUser,
+      loading: !isLoaded || (isSignedIn && syncing && !dbUser),
+      isAuthenticated: isSignedIn,
     }),
-    [user, token, loading],
+    [dbUser, isLoaded, isSignedIn, syncing],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

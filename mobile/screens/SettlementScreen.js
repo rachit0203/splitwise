@@ -18,6 +18,7 @@ export default function SettlementScreen() {
   const [amountByUser, setAmountByUser] = useState({});
 
   const loadData = useCallback(async () => {
+    if (!user?._id) return;
     try {
       const [balanceRes, historyRes] = await Promise.all([
         API.get(`/api/balances/user/${user._id}`),
@@ -28,7 +29,7 @@ export default function SettlementScreen() {
     } catch (e) {
       console.warn("Load settlement error:", e.message);
     }
-  }, [user._id]);
+  }, [user?._id]);
 
   useFocusEffect(
     useCallback(() => {

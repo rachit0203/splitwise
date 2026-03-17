@@ -1,5 +1,4 @@
 import axios from "axios";
-import * as SecureStore from "expo-secure-store";
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
@@ -14,15 +13,26 @@ const API = axios.create({
   timeout: 15000,
 });
 
+/**
+ * The token provider is set from AppNavigator/AuthContext
+ * so we can call Clerk's getToken() without hook dependency.
+ */
+let tokenProvider = null;
+
+export function setTokenProvider(fn) {
+  tokenProvider = fn;
+}
+
 API.interceptors.request.use(async (config) => {
-  try {
-    const token = await SecureStore.getItemAsync("authToken");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  if (tokenProvider) {
+    try {
+      const token = await tokenProvider();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn("Failed to get Clerk token:", e.message);
     }
-  } catch (e) {
-    // SecureStore may not be available on web
-    console.warn("Could not read auth token:", e.message);
   }
   return config;
 });

@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth as useClerkAuth } from "@clerk/clerk-expo";
 import { useAuth } from "../context/AuthContext";
+import { setTokenProvider } from "../services/api";
 import { colors } from "../utils/theme";
 
 import LoginScreen from "../screens/LoginScreen";
@@ -168,15 +170,32 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { loading, isAuthenticated } = useAuth();
+  const { isSignedIn, isLoaded, getToken } = useClerkAuth();
+  const { loading } = useAuth();
 
-  if (loading) {
+  // Wire up the Clerk token provider for the Axios interceptor
+  useEffect(() => {
+    if (isSignedIn) {
+      setTokenProvider(() => getToken());
+    } else {
+      setTokenProvider(null);
+    }
+  }, [isSignedIn, getToken]);
+
+  if (!isLoaded || loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  return isAuthenticated ? <MainTabs /> : <AuthStack />;
+  return isSignedIn ? <MainTabs /> : <AuthStack />;
 }

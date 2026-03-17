@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import {
   createSettlement,
   getMySettlementHistory,
@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.post("/", authMiddleware, createSettlement);
-router.get("/history/me", authMiddleware, getMySettlementHistory);
+router.post("/", requireAuth, createSettlement);
+router.get("/history/me", requireAuth, getMySettlementHistory);
 
 export default router;

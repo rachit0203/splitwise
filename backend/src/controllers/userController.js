@@ -1,4 +1,21 @@
 import User from "../models/User.js";
+
+const getMe = async (req, res) => {
+  try {
+    return res.status(200).json({
+      user: {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+      },
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch user", error: error.message });
+  }
+};
+
 const searchUsers = async (req, res) => {
   try {
     const query = (req.query.q || "").trim();
@@ -43,6 +60,7 @@ const getUserById = async (req, res) => {
 };
 
 export {
+  getMe,
   searchUsers,
   getUserById,
 };

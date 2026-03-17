@@ -71,15 +71,24 @@ export default function AddExpenseScreen({ route, navigation }) {
   };
 
   const onCreateExpense = async () => {
-    if (!description.trim() || !amount) {
-      Alert.alert("Missing", "Please fill description and amount");
+    if (!description.trim()) {
+      Alert.alert("Missing", "Please enter a description");
+      return;
+    }
+    const numAmount = Number(amount);
+    if (!amount || Number.isNaN(numAmount) || numAmount <= 0) {
+      Alert.alert("Invalid amount", "Please enter a valid amount greater than 0");
+      return;
+    }
+    if (selectedMemberIds.length === 0) {
+      Alert.alert("No participants", "Select at least one participant");
       return;
     }
     try {
       setLoading(true);
       await API.post("/api/expenses/create", {
-        description,
-        amount: Number(amount),
+        description: description.trim(),
+        amount: numAmount,
         paidBy,
         participants: buildParticipants(),
         splitType,

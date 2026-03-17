@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
+import { useClerk } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
 import Card from "../components/Card";
@@ -9,12 +10,17 @@ import { useAuth } from "../context/AuthContext";
 import { colors, fontSize, spacing } from "../utils/theme";
 
 export default function ProfileScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { signOut } = useClerk();
 
   const onLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: logout },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: () => signOut(),
+      },
     ]);
   };
 

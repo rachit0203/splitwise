@@ -131,8 +131,8 @@ export default function ExpenseDetailsScreen({ route, navigation }) {
         <Ionicons name="people-outline" size={16} color={colors.primary} />
         {"  "}Participants
       </Text>
-      {expense.participants.map((p) => (
-        <Card key={p.user?._id || p.user}>
+      {(expense.participants || []).map((p) => (
+        <Card key={p.user?._id || p.user || Math.random()}>
           <View style={styles.participantRow}>
             <Ionicons name="person-outline" size={18} color={colors.subtext} />
             <Text style={styles.participantName}>
@@ -140,8 +140,8 @@ export default function ExpenseDetailsScreen({ route, navigation }) {
             </Text>
             <Text style={styles.share}>
               {expense.splitType === "percentage"
-                ? `${p.percentage}%`
-                : `₹${(p.share || p.exactAmount || 0).toFixed(2)}`}
+                ? `${p.percentage ?? 0}%`
+                : `₹${Number(p.share || p.exactAmount || 0).toFixed(2)}`}
             </Text>
           </View>
         </Card>

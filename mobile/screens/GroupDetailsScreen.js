@@ -50,7 +50,9 @@ export default function GroupDetailsScreen({ route, navigation }) {
   }, [expenses, user?._id]);
 
   const nonMembers = friends.filter(
-    (f) => group && !group.members.some((m) => (m._id || m) === f._id),
+    (f) =>
+      group &&
+      !(group.members || []).some((m) => (m._id || m) === f._id),
   );
 
   const onAddMember = async (memberId) => {

@@ -1,5 +1,5 @@
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
+import requireAuth from "../middleware/requireAuth.js";
 import {
   sendFriendRequest,
   acceptOrRejectRequest,
@@ -8,8 +8,8 @@ import {
 
 const router = express.Router();
 
-router.post("/request", authMiddleware, sendFriendRequest);
-router.post("/accept", authMiddleware, acceptOrRejectRequest);
-router.get("/list", authMiddleware, getFriendList);
+router.post("/request", requireAuth, sendFriendRequest);
+router.post("/accept", requireAuth, acceptOrRejectRequest);
+router.get("/list", requireAuth, getFriendList);
 
 export default router;
