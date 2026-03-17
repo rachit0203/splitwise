@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Input from "../components/Input";
 import PrimaryButton from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing, borderRadius, shadow } from "../utils/theme";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -12,6 +14,10 @@ export default function LoginScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const onLogin = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert("Missing fields", "Please enter email and password");
+      return;
+    }
     try {
       setLoading(true);
       await login(email.trim(), password);
@@ -26,59 +32,103 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Welcome back</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-        />
-        <PrimaryButton
-          title={loading ? "Logging in..." : "Login"}
-          onPress={onLogin}
-        />
-        <PrimaryButton
-          title="Create account"
-          type="secondary"
-          onPress={() => navigation.navigate("Register")}
-        />
+    <ScreenContainer scroll={false} style={styles.screen}>
+      <View style={styles.container}>
+        {/* Logo */}
+        <View style={styles.logoWrap}>
+          <View style={styles.logoCircle}>
+            <Ionicons name="wallet" size={36} color="#fff" />
+          </View>
+          <Text style={styles.appName}>Split Expenses</Text>
+          <Text style={styles.tagline}>Manage shared expenses effortlessly</Text>
+        </View>
+
+        {/* Card */}
+        <View style={styles.card}>
+          <Text style={styles.title}>Welcome back</Text>
+
+          <Input
+            icon="mail-outline"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email address"
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <Input
+            icon="lock-closed-outline"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            secureTextEntry
+          />
+
+          <View style={styles.btnGap}>
+            <PrimaryButton
+              title={loading ? "Logging in..." : "Login"}
+              icon="log-in-outline"
+              onPress={onLogin}
+              disabled={loading}
+            />
+          </View>
+          <View style={styles.btnGap}>
+            <PrimaryButton
+              title="Create account"
+              type="outline"
+              icon="person-add-outline"
+              onPress={() => navigation.navigate("Register")}
+            />
+          </View>
+        </View>
       </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: 50,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
+  screen: {
+    justifyContent: "center",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
+  container: {
+    width: "100%",
+  },
+  logoWrap: {
+    alignItems: "center",
+    marginBottom: spacing.xxl,
+  },
+  logoCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    ...shadow.md,
+  },
+  appName: {
+    fontSize: fontSize.hero,
+    fontWeight: "800",
     color: colors.text,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#ffffff",
+  tagline: {
+    fontSize: fontSize.sm,
+    color: colors.subtext,
+    marginTop: spacing.xs,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    ...shadow.sm,
+  },
+  title: {
+    fontSize: fontSize.xxl,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: spacing.lg,
+  },
+  btnGap: {
+    marginTop: spacing.sm,
   },
 });

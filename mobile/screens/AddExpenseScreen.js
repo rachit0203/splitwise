@@ -1,12 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Input from "../components/Input";
+import Card from "../components/Card";
+import Avatar from "../components/Avatar";
 import PrimaryButton from "../components/PrimaryButton";
 import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing, borderRadius } from "../utils/theme";
 
 const splitTypes = ["equal", "unequal", "percentage", "exact"];
+const splitIcons = {
+  equal: "git-compare-outline",
+  unequal: "bar-chart-outline",
+  percentage: "pie-chart-outline",
+  exact: "cash-outline",
+};
 
 export default function AddExpenseScreen({ route, navigation }) {
   const { user } = useAuth();
@@ -18,21 +28,23 @@ export default function AddExpenseScreen({ route, navigation }) {
   const [splitType, setSplitType] = useState("equal");
   const [selectedParticipants, setSelectedParticipants] = useState({});
   const [allocationInput, setAllocationInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const loadGroup = async () => {
-      const { data } = await API.get(`/api/groups/${groupId}`);
-      const loadedGroup = data.group;
-      setGroup(loadedGroup);
-      setPaidBy(user._id);
-
-      const initial = {};
-      loadedGroup.members.forEach((member) => {
-        initial[member._id] = true;
-      });
-      setSelectedParticipants(initial);
+      try {
+        const { data } = await API.get(`/api/groups/${groupId}`);
+        setGroup(data.group);
+        setPaidBy(user._id);
+        const initial = {};
+        data.group.members.forEach((m) => {
+          initial[m._id] = true;
+        });
+        setSelectedParticipants(initial);
+      } catch (e) {
+        console.warn("Load group error:", e.message);
+      }
     };
-
     loadGroup();
   }, [groupId, user._id]);
 
@@ -44,47 +56,43 @@ export default function AddExpenseScreen({ route, navigation }) {
     if (splitType === "equal") {
       return selectedMemberIds.map((id) => ({ user: id }));
     }
-
     const values = allocationInput
       .split(",")
       .map((v) => Number(v.trim()))
       .filter((v) => !Number.isNaN(v));
-
     if (values.length !== selectedMemberIds.length) {
       throw new Error("Allocation count must match selected participants");
     }
-
-    return selectedMemberIds.map((id, index) => {
-      if (splitType === "unequal") {
-        return { user: id, share: values[index] };
-      }
-      if (splitType === "percentage") {
-        return { user: id, percentage: values[index] };
-      }
-      return { user: id, exactAmount: values[index] };
+    return selectedMemberIds.map((id, i) => {
+      if (splitType === "unequal") return { user: id, share: values[i] };
+      if (splitType === "percentage") return { user: id, percentage: values[i] };
+      return { user: id, exactAmount: values[i] };
     });
   };
 
   const onCreateExpense = async () => {
+    if (!description.trim() || !amount) {
+      Alert.alert("Missing", "Please fill description and amount");
+      return;
+    }
     try {
-      const payload = {
+      setLoading(true);
+      await API.post("/api/expenses/create", {
         description,
         amount: Number(amount),
         paidBy,
         participants: buildParticipants(),
         splitType,
         groupId,
-      };
-
-      await API.post("/api/expenses/create", payload);
+      });
       navigation.goBack();
     } catch (error) {
       Alert.alert(
         "Failed",
-        error?.response?.data?.message ||
-          error.message ||
-          "Could not add expense",
+        error?.response?.data?.message || error.message || "Could not add expense",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,103 +106,174 @@ export default function AddExpenseScreen({ route, navigation }) {
 
   return (
     <ScreenContainer>
-      <TextInput
+      <Input
+        label="Description"
+        icon="document-text-outline"
         value={description}
         onChangeText={setDescription}
-        placeholder="Expense description"
-        style={styles.input}
+        placeholder="What was the expense for?"
       />
-      <TextInput
+      <Input
+        label="Amount (₹)"
+        icon="cash-outline"
         value={amount}
         onChangeText={setAmount}
-        placeholder="Amount"
+        placeholder="0.00"
         keyboardType="numeric"
-        style={styles.input}
       />
 
-      <Text style={styles.section}>Payer</Text>
-      {group.members.map((member) => (
-        <View key={member._id} style={styles.card}>
-          <Text style={styles.name}>{member.name}</Text>
-          <PrimaryButton
-            title={paidBy === member._id ? "Selected" : "Select"}
-            onPress={() => setPaidBy(member._id)}
-            type={paidBy === member._id ? "secondary" : "primary"}
-          />
-        </View>
-      ))}
+      {/* Payer */}
+      <Text style={styles.sectionTitle}>
+        <Ionicons name="person-outline" size={16} color={colors.primary} />
+        {"  "}Paid By
+      </Text>
+      <View style={styles.chipRow}>
+        {group.members.map((m) => (
+          <Pressable
+            key={m._id}
+            style={[styles.chip, paidBy === m._id && styles.chipActive]}
+            onPress={() => setPaidBy(m._id)}
+          >
+            <Avatar name={m.name} size={24} />
+            <Text
+              style={[
+                styles.chipText,
+                paidBy === m._id && styles.chipTextActive,
+              ]}
+            >
+              {m.name?.split(" ")[0]}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
-      <Text style={styles.section}>Participants</Text>
-      {group.members.map((member) => (
-        <View key={member._id} style={styles.card}>
-          <Text style={styles.name}>{member.name}</Text>
-          <PrimaryButton
-            title={selectedParticipants[member._id] ? "Included" : "Excluded"}
-            type={selectedParticipants[member._id] ? "secondary" : "danger"}
-            onPress={() =>
-              setSelectedParticipants((prev) => ({
-                ...prev,
-                [member._id]: !prev[member._id],
-              }))
-            }
-          />
-        </View>
-      ))}
+      {/* Participants */}
+      <Text style={styles.sectionTitle}>
+        <Ionicons name="people-outline" size={16} color={colors.primary} />
+        {"  "}Split Among
+      </Text>
+      <View style={styles.chipRow}>
+        {group.members.map((m) => {
+          const selected = selectedParticipants[m._id];
+          return (
+            <Pressable
+              key={m._id}
+              style={[styles.chip, selected && styles.chipActive]}
+              onPress={() =>
+                setSelectedParticipants((prev) => ({
+                  ...prev,
+                  [m._id]: !prev[m._id],
+                }))
+              }
+            >
+              <Ionicons
+                name={selected ? "checkmark-circle" : "ellipse-outline"}
+                size={16}
+                color={selected ? "#fff" : colors.subtext}
+              />
+              <Text
+                style={[styles.chipText, selected && styles.chipTextActive]}
+              >
+                {m.name?.split(" ")[0]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-      <Text style={styles.section}>Split Type</Text>
-      {splitTypes.map((type) => (
-        <PrimaryButton
-          key={type}
-          title={type}
-          type={splitType === type ? "secondary" : "primary"}
-          onPress={() => setSplitType(type)}
-        />
-      ))}
+      {/* Split Type */}
+      <Text style={styles.sectionTitle}>
+        <Ionicons name="git-compare-outline" size={16} color={colors.primary} />
+        {"  "}Split Type
+      </Text>
+      <View style={styles.chipRow}>
+        {splitTypes.map((type) => (
+          <Pressable
+            key={type}
+            style={[styles.chip, splitType === type && styles.chipActive]}
+            onPress={() => setSplitType(type)}
+          >
+            <Ionicons
+              name={splitIcons[type]}
+              size={16}
+              color={splitType === type ? "#fff" : colors.subtext}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                splitType === type && styles.chipTextActive,
+              ]}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {splitType !== "equal" ? (
-        <TextInput
+        <Input
+          label="Allocation Values"
+          icon="create-outline"
           value={allocationInput}
           onChangeText={setAllocationInput}
-          placeholder="Comma values in selected member order"
-          style={styles.input}
+          placeholder="Comma-separated values in member order"
         />
       ) : null}
 
-      <PrimaryButton title="Create Expense" onPress={onCreateExpense} />
+      <View style={styles.createWrap}>
+        <PrimaryButton
+          title={loading ? "Creating..." : "Create Expense"}
+          icon="add-circle-outline"
+          onPress={onCreateExpense}
+          disabled={loading}
+        />
+      </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 10,
-  },
-  section: {
-    marginTop: 12,
+  sectionTitle: {
+    fontSize: fontSize.md,
     fontWeight: "600",
     color: colors.text,
-    fontSize: 17,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
   },
-  card: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 12,
+  chipRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
   },
-  name: {
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
     color: colors.text,
-    fontWeight: "600",
+    fontSize: fontSize.sm,
+    fontWeight: "500",
+  },
+  chipTextActive: {
+    color: "#fff",
+  },
+  createWrap: {
+    marginTop: spacing.xl,
   },
   empty: {
     color: colors.subtext,
+    textAlign: "center",
+    paddingVertical: spacing.xl,
   },
 });

@@ -25,6 +25,9 @@ export const AuthProvider = ({ children }) => {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
         }
+      } catch (e) {
+        // SecureStore not available (e.g. web) – skip session restore
+        console.warn("Could not restore session:", e.message);
       } finally {
         setLoading(false);
       }
@@ -35,8 +38,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const { data } = await API.post("/api/auth/login", { email, password });
-    await SecureStore.setItemAsync("authToken", data.token);
-    await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
+    try {
+      await SecureStore.setItemAsync("authToken", data.token);
+      await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
+    } catch (e) {
+      console.warn("Could not persist session:", e.message);
+    }
     setToken(data.token);
     setUser(data.user);
     return data.user;
@@ -48,16 +55,24 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
     });
-    await SecureStore.setItemAsync("authToken", data.token);
-    await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
+    try {
+      await SecureStore.setItemAsync("authToken", data.token);
+      await SecureStore.setItemAsync("authUser", JSON.stringify(data.user));
+    } catch (e) {
+      console.warn("Could not persist session:", e.message);
+    }
     setToken(data.token);
     setUser(data.user);
     return data.user;
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync("authToken");
-    await SecureStore.deleteItemAsync("authUser");
+    try {
+      await SecureStore.deleteItemAsync("authToken");
+      await SecureStore.deleteItemAsync("authUser");
+    } catch (e) {
+      console.warn("Could not clear session:", e.message);
+    }
     setToken(null);
     setUser(null);
   };

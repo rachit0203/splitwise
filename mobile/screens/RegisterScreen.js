@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Input from "../components/Input";
 import PrimaryButton from "../components/PrimaryButton";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing, borderRadius, shadow } from "../utils/theme";
 
-export default function RegisterScreen() {
+export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -13,6 +15,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const onRegister = async () => {
+    if (!name.trim() || !email.trim() || !password) {
+      Alert.alert("Missing fields", "Please fill in all fields");
+      return;
+    }
     try {
       setLoading(true);
       await register(name.trim(), email.trim(), password);
@@ -27,60 +33,100 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScreenContainer scroll={false}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Create account</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Name"
-          style={styles.input}
-        />
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={styles.input}
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-        />
-        <PrimaryButton
-          title={loading ? "Creating account..." : "Register"}
-          onPress={onRegister}
-        />
+    <ScreenContainer scroll={false} style={styles.screen}>
+      <View style={styles.container}>
+        {/* Logo */}
+        <View style={styles.logoWrap}>
+          <View style={styles.logoCircle}>
+            <Ionicons name="person-add" size={32} color="#fff" />
+          </View>
+          <Text style={styles.heading}>Create Account</Text>
+          <Text style={styles.tagline}>Join and start splitting expenses</Text>
+        </View>
+
+        {/* Card */}
+        <View style={styles.card}>
+          <Input
+            icon="person-outline"
+            value={name}
+            onChangeText={setName}
+            placeholder="Full name"
+          />
+          <Input
+            icon="mail-outline"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email address"
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <Input
+            icon="lock-closed-outline"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password (min 6 characters)"
+            secureTextEntry
+          />
+
+          <View style={styles.btnGap}>
+            <PrimaryButton
+              title={loading ? "Creating account..." : "Register"}
+              icon="checkmark-circle-outline"
+              onPress={onRegister}
+              disabled={loading}
+            />
+          </View>
+          <View style={styles.btnGap}>
+            <PrimaryButton
+              title="Already have an account? Login"
+              type="outline"
+              onPress={() => navigation.goBack()}
+            />
+          </View>
+        </View>
       </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: 40,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    gap: 12,
+  screen: {
+    justifyContent: "center",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
+  container: {
+    width: "100%",
+  },
+  logoWrap: {
+    alignItems: "center",
+    marginBottom: spacing.xxl,
+  },
+  logoCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: colors.secondary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    ...shadow.md,
+  },
+  heading: {
+    fontSize: fontSize.hero,
+    fontWeight: "800",
     color: colors.text,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#ffffff",
+  tagline: {
+    fontSize: fontSize.sm,
+    color: colors.subtext,
+    marginTop: spacing.xs,
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    ...shadow.sm,
+  },
+  btnGap: {
+    marginTop: spacing.sm,
   },
 });

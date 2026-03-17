@@ -2,20 +2,24 @@ import React from "react";
 import { SafeAreaView, ScrollView, StyleSheet, View } from "react-native";
 import { colors, spacing } from "../utils/theme";
 
-export default function ScreenContainer({ children, scroll = true }) {
-  const content = <View style={styles.content}>{children}</View>;
-
+export default function ScreenContainer({ children, scroll = true, style }) {
   if (scroll) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scroll}>{content}</ScrollView>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.content, style]}>{children}</View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.scroll}>{content}</View>
+      <View style={[styles.fullContent, style]}>{children}</View>
     </SafeAreaView>
   );
 }
@@ -25,11 +29,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scroll: {
+  scrollContent: {
     flexGrow: 1,
   },
   content: {
-    padding: spacing.md,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  fullContent: {
+    flex: 1,
+    padding: spacing.lg,
     gap: spacing.sm,
   },
 });

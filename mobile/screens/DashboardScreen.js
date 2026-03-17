@@ -1,15 +1,17 @@
 import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
-import StatCard from "../components/StatCard";
-import PrimaryButton from "../components/PrimaryButton";
+import BalanceCard from "../components/BalanceCard";
+import ExpenseCard from "../components/ExpenseCard";
+import FloatingButton from "../components/FloatingButton";
 import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing } from "../utils/theme";
 
 export default function DashboardScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [summary, setSummary] = useState({
     totalBalance: 0,
     youOwe: 0,
@@ -18,33 +20,36 @@ export default function DashboardScreen({ navigation }) {
   const [recentExpenses, setRecentExpenses] = useState([]);
   const [simplified, setSimplified] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [firstGroupId, setFirstGroupId] = useState(null);
 
   const loadDashboard = useCallback(async () => {
-    if (!user?._id) {
-      return;
+    if (!user?._id) return;
+
+    try {
+      const [balanceRes, groupsRes] = await Promise.all([
+        API.get(`/api/balances/user/${user._id}`),
+        API.get("/api/groups/my"),
+      ]);
+
+      setSummary(balanceRes.data.summary);
+      setSimplified(balanceRes.data.simplified || []);
+
+      const groups = groupsRes.data.groups || [];
+      if (groups.length > 0) setFirstGroupId(groups[0]._id);
+
+      const expenseResults = await Promise.all(
+        groups.slice(0, 4).map((g) => API.get(`/api/expenses/group/${g._id}`)),
+      );
+
+      const flattened = expenseResults
+        .flatMap((r) => r.data.expenses || [])
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 8);
+
+      setRecentExpenses(flattened);
+    } catch (e) {
+      console.warn("Dashboard load error:", e.message);
     }
-
-    const [balanceRes, groupsRes] = await Promise.all([
-      API.get(`/api/balances/user/${user._id}`),
-      API.get("/api/groups/my"),
-    ]);
-
-    setSummary(balanceRes.data.summary);
-    setSimplified(balanceRes.data.simplified || []);
-
-    const groups = groupsRes.data.groups || [];
-    const expenseResults = await Promise.all(
-      groups
-        .slice(0, 4)
-        .map((group) => API.get(`/api/expenses/group/${group._id}`)),
-    );
-
-    const flattened = expenseResults
-      .flatMap((result) => result.data.expenses || [])
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 8);
-
-    setRecentExpenses(flattened);
   }, [user?._id]);
 
   useFocusEffect(
@@ -60,116 +65,145 @@ export default function DashboardScreen({ navigation }) {
   };
 
   return (
-    <ScreenContainer>
-      <Text style={styles.heading}>Hi {user?.name}</Text>
-      <StatCard
-        label="Total Balance"
-        value={`Rs ${summary.totalBalance.toFixed(2)}`}
-      />
-      <StatCard
-        label="You Owe"
-        value={`Rs ${summary.youOwe.toFixed(2)}`}
-        tone="danger"
-      />
-      <StatCard
-        label="You Are Owed"
-        value={`Rs ${summary.youAreOwed.toFixed(2)}`}
-        tone="success"
-      />
-
-      <View style={styles.row}>
-        <PrimaryButton
-          title="Friends"
-          onPress={() => navigation.navigate("Friends")}
-        />
-      </View>
-      <View style={styles.row}>
-        <PrimaryButton
-          title="Groups"
-          type="secondary"
-          onPress={() => navigation.navigate("Groups")}
-        />
-      </View>
-      <View style={styles.row}>
-        <PrimaryButton
-          title="Settlement"
-          onPress={() => navigation.navigate("Settlement")}
-        />
-      </View>
-      <View style={styles.row}>
-        <PrimaryButton title="Logout" type="danger" onPress={logout} />
-      </View>
-
-      <Text style={styles.section}>Who owes whom</Text>
-      {simplified.length === 0 ? (
-        <Text style={styles.empty}>No pending balances</Text>
-      ) : null}
-      {simplified.map((line) => (
-        <Text key={line} style={styles.item}>
-          {line}
-        </Text>
-      ))}
-
-      <Text style={styles.section}>Recent Expenses</Text>
-      <FlatList
-        data={recentExpenses}
-        keyExtractor={(item) => item._id}
-        scrollEnabled={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        renderItem={({ item }) => (
-          <View style={styles.expenseCard}>
-            <Text style={styles.expenseTitle}>{item.description}</Text>
-            <Text style={styles.expenseMeta}>
-              Rs {Number(item.amount).toFixed(2)}
-            </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScreenContainer>
+        {/* Greeting */}
+        <View style={styles.greetRow}>
+          <View>
+            <Text style={styles.greeting}>Hi, {user?.name} 👋</Text>
+            <Text style={styles.greetSub}>Here's your expense summary</Text>
           </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>No expenses yet</Text>}
-      />
-    </ScreenContainer>
+        </View>
+
+        {/* Balance Cards */}
+        <View style={styles.cardRow}>
+          <BalanceCard
+            label="Total Balance"
+            value={`₹${summary.totalBalance.toFixed(0)}`}
+            icon="wallet-outline"
+            tint={colors.primary}
+          />
+        </View>
+        <View style={styles.cardRow}>
+          <BalanceCard
+            label="You Owe"
+            value={`₹${summary.youOwe.toFixed(0)}`}
+            icon="arrow-up-circle-outline"
+            tint={colors.danger}
+          />
+          <View style={{ width: spacing.sm }} />
+          <BalanceCard
+            label="You Are Owed"
+            value={`₹${summary.youAreOwed.toFixed(0)}`}
+            icon="arrow-down-circle-outline"
+            tint={colors.success}
+          />
+        </View>
+
+        {/* Who owes whom */}
+        {simplified.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
+              {"  "}Who Owes Whom
+            </Text>
+            {simplified.map((line) => (
+              <Text key={line} style={styles.simplifiedLine}>
+                {line}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Recent Expenses */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            <Ionicons name="receipt-outline" size={16} color={colors.primary} />
+            {"  "}Recent Expenses
+          </Text>
+
+          <FlatList
+            data={recentExpenses}
+            keyExtractor={(item) => item._id}
+            scrollEnabled={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+            renderItem={({ item }) => (
+              <ExpenseCard
+                expense={item}
+                onPress={() =>
+                  navigation.navigate("ExpenseDetails", {
+                    expenseId: item._id,
+                  })
+                }
+              />
+            )}
+            ListEmptyComponent={
+              <Text style={styles.empty}>No expenses yet — add one!</Text>
+            }
+          />
+        </View>
+      </ScreenContainer>
+
+      {firstGroupId ? (
+        <FloatingButton
+          onPress={() =>
+            navigation.navigate("AddExpense", { groupId: firstGroupId })
+          }
+        />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  heading: {
-    fontSize: 24,
+  greetRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  greeting: {
+    fontSize: fontSize.xxl,
     fontWeight: "700",
     color: colors.text,
-    marginBottom: 4,
   },
-  row: {
-    marginTop: 4,
-  },
-  section: {
-    marginTop: 14,
-    fontSize: 17,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  item: {
-    color: colors.subtext,
-    marginTop: 4,
-  },
-  expenseCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 8,
-  },
-  expenseTitle: {
-    fontWeight: "600",
-    color: colors.text,
-  },
-  expenseMeta: {
+  greetSub: {
+    fontSize: fontSize.sm,
     color: colors.subtext,
     marginTop: 2,
   },
+  cardRow: {
+    flexDirection: "row",
+    marginBottom: spacing.sm,
+  },
+  section: {
+    marginTop: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: "600",
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  simplifiedLine: {
+    color: colors.subtext,
+    fontSize: fontSize.sm,
+    paddingVertical: spacing.xs,
+    paddingLeft: spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary + "40",
+    marginBottom: spacing.xs,
+  },
   empty: {
     color: colors.subtext,
-    marginTop: 8,
+    fontSize: fontSize.sm,
+    textAlign: "center",
+    paddingVertical: spacing.xl,
   },
 });

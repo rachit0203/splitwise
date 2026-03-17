@@ -1,56 +1,56 @@
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Input from "../components/Input";
+import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
 import API from "../services/api";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing } from "../utils/theme";
 
 export default function ExpenseDetailsScreen({ route, navigation }) {
   const { expenseId } = route.params;
   const [expense, setExpense] = useState(null);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const loadExpense = async () => {
-      const { data: groupsData } = await API.get("/api/groups/my");
-
-      for (const group of groupsData.groups || []) {
-        const { data } = await API.get(`/api/expenses/group/${group._id}`);
-        const found = (data.expenses || []).find(
-          (item) => item._id === expenseId,
-        );
-        if (found) {
-          setExpense(found);
-          setDescription(found.description);
-          setAmount(String(found.amount));
-          return;
+      try {
+        const { data: groupsData } = await API.get("/api/groups/my");
+        for (const group of groupsData.groups || []) {
+          const { data } = await API.get(`/api/expenses/group/${group._id}`);
+          const found = (data.expenses || []).find((item) => item._id === expenseId);
+          if (found) {
+            setExpense(found);
+            setDescription(found.description);
+            setAmount(String(found.amount));
+            return;
+          }
         }
+      } catch (e) {
+        console.warn("Load expense error:", e.message);
       }
     };
-
     loadExpense();
   }, [expenseId]);
 
   const onUpdate = async () => {
-    if (!expense) {
-      return;
-    }
-
+    if (!expense) return;
     try {
-      const payload = {
+      setSaving(true);
+      await API.put(`/api/expenses/${expense._id}`, {
         description,
         amount: Number(amount),
         splitType: expense.splitType,
-        participants: expense.participants.map((participant) => ({
-          user: participant.user._id || participant.user,
-          share: participant.share,
-          percentage: participant.percentage,
-          exactAmount: participant.exactAmount,
+        participants: expense.participants.map((p) => ({
+          user: p.user._id || p.user,
+          share: p.share,
+          percentage: p.percentage,
+          exactAmount: p.exactAmount,
         })),
-      };
-
-      await API.put(`/api/expenses/${expense._id}`, payload);
+      });
       Alert.alert("Success", "Expense updated");
       navigation.goBack();
     } catch (error) {
@@ -58,83 +58,166 @@ export default function ExpenseDetailsScreen({ route, navigation }) {
         "Failed",
         error?.response?.data?.message || "Could not update expense",
       );
+    } finally {
+      setSaving(false);
     }
   };
 
   const onDelete = async () => {
-    if (!expense) {
-      return;
-    }
-
-    try {
-      await API.delete(`/api/expenses/${expense._id}`);
-      Alert.alert("Deleted", "Expense deleted");
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert(
-        "Failed",
-        error?.response?.data?.message || "Could not delete expense",
-      );
-    }
+    if (!expense) return;
+    Alert.alert("Delete Expense", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await API.delete(`/api/expenses/${expense._id}`);
+            Alert.alert("Deleted", "Expense deleted");
+            navigation.goBack();
+          } catch (error) {
+            Alert.alert(
+              "Failed",
+              error?.response?.data?.message || "Could not delete expense",
+            );
+          }
+        },
+      },
+    ]);
   };
 
   if (!expense) {
     return (
       <ScreenContainer>
-        <Text style={styles.meta}>Loading expense...</Text>
+        <Text style={styles.loading}>Loading expense...</Text>
       </ScreenContainer>
     );
   }
 
   return (
     <ScreenContainer>
-      <View style={styles.card}>
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          style={styles.input}
-        />
+      <Card>
+        <View style={styles.headerRow}>
+          <View style={styles.expenseIcon}>
+            <Ionicons name="receipt" size={24} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.amount}>₹{Number(expense.amount).toFixed(2)}</Text>
+            <Text style={styles.meta}>
+              Paid by {expense.paidBy?.name} · {expense.splitType} split
+            </Text>
+          </View>
+        </View>
+      </Card>
 
-        <Text style={styles.label}>Amount</Text>
-        <TextInput
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          style={styles.input}
-        />
+      <Input
+        label="Description"
+        icon="document-text-outline"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Expense description"
+      />
+      <Input
+        label="Amount (₹)"
+        icon="cash-outline"
+        value={amount}
+        onChangeText={setAmount}
+        placeholder="0.00"
+        keyboardType="numeric"
+      />
 
-        <Text style={styles.meta}>Paid by: {expense.paidBy?.name}</Text>
-        <Text style={styles.meta}>Split: {expense.splitType}</Text>
+      {/* Participants */}
+      <Text style={styles.sectionTitle}>
+        <Ionicons name="people-outline" size={16} color={colors.primary} />
+        {"  "}Participants
+      </Text>
+      {expense.participants.map((p) => (
+        <Card key={p.user?._id || p.user}>
+          <View style={styles.participantRow}>
+            <Ionicons name="person-outline" size={18} color={colors.subtext} />
+            <Text style={styles.participantName}>
+              {p.user?.name || "Unknown"}
+            </Text>
+            <Text style={styles.share}>
+              {expense.splitType === "percentage"
+                ? `${p.percentage}%`
+                : `₹${(p.share || p.exactAmount || 0).toFixed(2)}`}
+            </Text>
+          </View>
+        </Card>
+      ))}
+
+      <View style={styles.actions}>
+        <PrimaryButton
+          title={saving ? "Saving..." : "Save Changes"}
+          icon="checkmark-circle-outline"
+          onPress={onUpdate}
+          disabled={saving}
+        />
+        <View style={{ height: spacing.sm }} />
+        <PrimaryButton
+          title="Delete Expense"
+          type="danger"
+          icon="trash-outline"
+          onPress={onDelete}
+        />
       </View>
-
-      <PrimaryButton title="Save Changes" onPress={onUpdate} />
-      <PrimaryButton title="Delete Expense" type="danger" onPress={onDelete} />
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
-    gap: 8,
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  label: {
+  expenseIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary + "18",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.md,
+  },
+  amount: {
+    fontSize: fontSize.xxl,
+    fontWeight: "700",
     color: colors.text,
-    fontWeight: "600",
   },
   meta: {
     color: colors.subtext,
+    fontSize: fontSize.sm,
+    marginTop: 2,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 10,
+  sectionTitle: {
+    fontSize: fontSize.md,
+    fontWeight: "600",
+    color: colors.text,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  participantRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  participantName: {
+    flex: 1,
+    color: colors.text,
+    fontSize: fontSize.md,
+  },
+  share: {
+    fontWeight: "600",
+    color: colors.primary,
+    fontSize: fontSize.md,
+  },
+  actions: {
+    marginTop: spacing.xl,
+  },
+  loading: {
+    color: colors.subtext,
+    textAlign: "center",
+    paddingVertical: spacing.xl,
   },
 });

@@ -1,42 +1,69 @@
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, spacing } from "../utils/theme";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, borderRadius, fontSize, spacing } from "../utils/theme";
 
-export default function PrimaryButton({ title, onPress, type = "primary" }) {
+export default function PrimaryButton({
+  title,
+  onPress,
+  type = "primary",
+  icon,
+  disabled = false,
+  compact = false,
+}) {
+  const bg =
+    type === "secondary"
+      ? colors.secondary
+      : type === "danger"
+        ? colors.danger
+        : type === "outline"
+          ? "transparent"
+          : colors.primary;
+
+  const textColor = type === "outline" ? colors.primary : "#ffffff";
+  const borderColor = type === "outline" ? colors.primary : bg;
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
-        type === "secondary" && styles.secondary,
-        type === "danger" && styles.danger,
+        compact && styles.compact,
+        { backgroundColor: bg, borderColor },
         pressed && styles.pressed,
+        disabled && styles.disabled,
       ]}
       onPress={onPress}
+      disabled={disabled}
     >
-      <Text style={styles.label}>{title}</Text>
+      {icon ? (
+        <Ionicons
+          name={icon}
+          size={16}
+          color={textColor}
+          style={styles.icon}
+        />
+      ) : null}
+      <Text style={[styles.label, { color: textColor }]}>{title}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    borderRadius: 10,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
   },
-  secondary: {
-    backgroundColor: colors.secondary,
+  compact: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
-  danger: {
-    backgroundColor: colors.danger,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  label: {
-    color: "#ffffff",
-    fontWeight: "600",
-    fontSize: 15,
-  },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  disabled: { opacity: 0.45 },
+  icon: { marginRight: spacing.sm },
+  label: { fontWeight: "600", fontSize: fontSize.md },
 });

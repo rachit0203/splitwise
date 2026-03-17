@@ -1,17 +1,25 @@
 import React, { useCallback, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Card from "../components/Card";
 import PrimaryButton from "../components/PrimaryButton";
+import FloatingButton from "../components/FloatingButton";
 import API from "../services/api";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing, borderRadius } from "../utils/theme";
 
 export default function GroupListScreen({ navigation }) {
   const [groups, setGroups] = useState([]);
+  const [search, setSearch] = useState("");
 
   const loadGroups = useCallback(async () => {
-    const { data } = await API.get("/api/groups/my");
-    setGroups(data.groups || []);
+    try {
+      const { data } = await API.get("/api/groups/my");
+      setGroups(data.groups || []);
+    } catch (e) {
+      console.warn("Load groups error:", e.message);
+    }
   }, []);
 
   useFocusEffect(
@@ -20,51 +28,116 @@ export default function GroupListScreen({ navigation }) {
     }, [loadGroups]),
   );
 
+  const filtered = groups.filter(
+    (g) => !search || g.name?.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
-    <ScreenContainer>
-      <PrimaryButton
-        title="Create Group"
-        onPress={() => navigation.navigate("CreateGroup")}
-      />
-      {groups.length === 0 ? (
-        <Text style={styles.empty}>No groups found</Text>
-      ) : null}
-      {groups.map((group) => (
-        <View key={group._id} style={styles.card}>
-          <Text style={styles.name}>{group.name}</Text>
-          <Text style={styles.meta}>{group.members?.length || 0} members</Text>
-          <PrimaryButton
-            title="Open Group"
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScreenContainer>
+        {/* Search */}
+        <View style={styles.searchRow}>
+          <Ionicons name="search" size={18} color={colors.subtext} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search groups..."
+            placeholderTextColor={colors.placeholder}
+            style={styles.searchInput}
+          />
+        </View>
+
+        {filtered.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="people-outline" size={48} color={colors.border} />
+            <Text style={styles.empty}>
+              {search ? "No matching groups" : "No groups yet"}
+            </Text>
+          </View>
+        ) : null}
+
+        {filtered.map((group) => (
+          <Card
+            key={group._id}
             onPress={() =>
               navigation.navigate("GroupDetails", { groupId: group._id })
             }
-          />
-        </View>
-      ))}
-    </ScreenContainer>
+          >
+            <View style={styles.groupRow}>
+              <View style={styles.groupIcon}>
+                <Ionicons name="people" size={22} color={colors.secondary} />
+              </View>
+              <View style={styles.groupInfo}>
+                <Text style={styles.groupName}>{group.name}</Text>
+                <Text style={styles.groupMeta}>
+                  {group.members?.length || 0} members
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.subtext}
+              />
+            </View>
+          </Card>
+        ))}
+      </ScreenContainer>
+
+      <FloatingButton
+        icon="add"
+        onPress={() => navigation.navigate("CreateGroup")}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginTop: 10,
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    gap: 8,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
   },
-  name: {
-    fontWeight: "700",
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    marginLeft: spacing.sm,
     color: colors.text,
-    fontSize: 16,
+    fontSize: fontSize.md,
   },
-  meta: {
-    color: colors.subtext,
+  emptyWrap: {
+    alignItems: "center",
+    paddingVertical: spacing.xxxl,
   },
   empty: {
-    marginTop: 8,
     color: colors.subtext,
+    fontSize: fontSize.sm,
+    marginTop: spacing.sm,
+  },
+  groupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  groupIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.secondary + "18",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: spacing.md,
+  },
+  groupInfo: { flex: 1 },
+  groupName: {
+    fontWeight: "600",
+    color: colors.text,
+    fontSize: fontSize.md,
+  },
+  groupMeta: {
+    color: colors.subtext,
+    fontSize: fontSize.sm,
+    marginTop: 2,
   },
 });

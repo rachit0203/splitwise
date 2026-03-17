@@ -1,11 +1,17 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import ScreenContainer from "../components/ScreenContainer";
+import Card from "../components/Card";
+import Avatar from "../components/Avatar";
+import BalanceCard from "../components/BalanceCard";
+import ExpenseCard from "../components/ExpenseCard";
+import FloatingButton from "../components/FloatingButton";
 import PrimaryButton from "../components/PrimaryButton";
 import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { colors } from "../utils/theme";
+import { colors, fontSize, spacing, borderRadius } from "../utils/theme";
 
 export default function GroupDetailsScreen({ route, navigation }) {
   const { user } = useAuth();
@@ -13,18 +19,20 @@ export default function GroupDetailsScreen({ route, navigation }) {
   const [group, setGroup] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [memberIdToAdd, setMemberIdToAdd] = useState("");
 
   const loadData = useCallback(async () => {
-    const [groupRes, expenseRes, friendRes] = await Promise.all([
-      API.get(`/api/groups/${groupId}`),
-      API.get(`/api/expenses/group/${groupId}`),
-      API.get("/api/friends/list"),
-    ]);
-
-    setGroup(groupRes.data.group);
-    setExpenses(expenseRes.data.expenses || []);
-    setFriends(friendRes.data.friends || []);
+    try {
+      const [groupRes, expenseRes, friendRes] = await Promise.all([
+        API.get(`/api/groups/${groupId}`),
+        API.get(`/api/expenses/group/${groupId}`),
+        API.get("/api/friends/list"),
+      ]);
+      setGroup(groupRes.data.group);
+      setExpenses(expenseRes.data.expenses || []);
+      setFriends(friendRes.data.friends || []);
+    } catch (e) {
+      console.warn("Load group error:", e.message);
+    }
   }, [groupId]);
 
   useFocusEffect(
@@ -34,28 +42,20 @@ export default function GroupDetailsScreen({ route, navigation }) {
   );
 
   const summary = useMemo(() => {
-    const total = expenses.reduce(
-      (sum, expense) => sum + Number(expense.amount),
-      0,
-    );
+    const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
     const paid = expenses
-      .filter((expense) => expense.paidBy?._id === user?._id)
-      .reduce((sum, expense) => sum + Number(expense.amount), 0);
-
+      .filter((e) => e.paidBy?._id === user?._id)
+      .reduce((s, e) => s + Number(e.amount), 0);
     return { total, paid, count: expenses.length };
   }, [expenses, user?._id]);
 
-  const onAddMember = async () => {
-    if (!memberIdToAdd) {
-      return;
-    }
+  const nonMembers = friends.filter(
+    (f) => group && !group.members.some((m) => (m._id || m) === f._id),
+  );
 
+  const onAddMember = async (memberId) => {
     try {
-      await API.post("/api/groups/add-member", {
-        groupId,
-        memberId: memberIdToAdd,
-      });
-      setMemberIdToAdd("");
+      await API.post("/api/groups/add-member", { groupId, memberId });
       await loadData();
     } catch (error) {
       Alert.alert(
@@ -74,118 +74,173 @@ export default function GroupDetailsScreen({ route, navigation }) {
   }
 
   return (
-    <ScreenContainer>
-      <Text style={styles.title}>{group.name}</Text>
-      <Text style={styles.meta}>
-        Total spend: Rs {summary.total.toFixed(2)}
-      </Text>
-      <Text style={styles.meta}>Expense count: {summary.count}</Text>
-      <Text style={styles.meta}>You paid: Rs {summary.paid.toFixed(2)}</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScreenContainer>
+        {/* Group header */}
+        <View style={styles.header}>
+          <View style={styles.groupIcon}>
+            <Ionicons name="people" size={28} color={colors.secondary} />
+          </View>
+          <Text style={styles.title}>{group.name}</Text>
+          <Text style={styles.memberCount}>
+            {group.members?.length} members
+          </Text>
+        </View>
 
-      <PrimaryButton
-        title="Add Expense"
-        onPress={() => navigation.navigate("AddExpense", { groupId })}
-      />
-
-      <Text style={styles.section}>Add Friend To Group</Text>
-      {friends.map((friend) => (
-        <View key={friend._id} style={styles.friendRow}>
-          <Text style={styles.friendName}>{friend.name}</Text>
-          <PrimaryButton
-            title="Add"
-            onPress={() => setMemberIdToAdd(friend._id)}
+        {/* Summary Cards */}
+        <View style={styles.cardRow}>
+          <BalanceCard
+            label="Total Spent"
+            value={`₹${summary.total.toFixed(0)}`}
+            icon="cash-outline"
+            tint={colors.primary}
+          />
+          <View style={{ width: spacing.sm }} />
+          <BalanceCard
+            label="You Paid"
+            value={`₹${summary.paid.toFixed(0)}`}
+            icon="card-outline"
+            tint={colors.success}
           />
         </View>
-      ))}
-      <TextInput
-        value={memberIdToAdd}
-        onChangeText={setMemberIdToAdd}
-        placeholder="Selected friend id"
-        style={styles.input}
-      />
-      <PrimaryButton
-        title="Confirm Add Member"
-        type="secondary"
-        onPress={onAddMember}
-      />
 
-      <Text style={styles.section}>Expenses</Text>
-      {expenses.map((expense) => (
-        <View key={expense._id} style={styles.card}>
-          <Text style={styles.expenseTitle}>{expense.description}</Text>
-          <Text style={styles.meta}>
-            Rs {Number(expense.amount).toFixed(2)}
-          </Text>
-          <Text style={styles.meta}>Paid by: {expense.paidBy?.name}</Text>
-          <PrimaryButton
-            title="View Details"
+        {/* Members */}
+        <Text style={styles.sectionTitle}>
+          <Ionicons name="people-outline" size={16} color={colors.primary} />
+          {"  "}Members
+        </Text>
+        <View style={styles.membersRow}>
+          {(group.members || []).map((m) => (
+            <View key={m._id} style={styles.memberChip}>
+              <Avatar name={m.name} size={28} />
+              <Text style={styles.memberName}>{m.name?.split(" ")[0]}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Add Friends to Group */}
+        {nonMembers.length > 0 ? (
+          <View style={styles.addSection}>
+            <Text style={styles.sectionTitle}>
+              <Ionicons name="person-add-outline" size={16} color={colors.secondary} />
+              {"  "}Add Friend to Group
+            </Text>
+            {nonMembers.map((friend) => (
+              <Card key={friend._id}>
+                <View style={styles.friendRow}>
+                  <Avatar name={friend.name} size={36} />
+                  <Text style={styles.friendName}>{friend.name}</Text>
+                  <PrimaryButton
+                    title="Add"
+                    compact
+                    type="secondary"
+                    onPress={() => onAddMember(friend._id)}
+                  />
+                </View>
+              </Card>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Expenses */}
+        <Text style={styles.sectionTitle}>
+          <Ionicons name="receipt-outline" size={16} color={colors.primary} />
+          {"  "}Expenses ({summary.count})
+        </Text>
+        {expenses.length === 0 ? (
+          <Text style={styles.empty}>No expenses in this group</Text>
+        ) : null}
+        {expenses.map((expense) => (
+          <ExpenseCard
+            key={expense._id}
+            expense={expense}
             onPress={() =>
-              navigation.navigate("ExpenseDetails", { expenseId: expense._id })
+              navigation.navigate("ExpenseDetails", {
+                expenseId: expense._id,
+              })
             }
           />
-        </View>
-      ))}
+        ))}
+      </ScreenContainer>
 
-      {expenses.length === 0 ? (
-        <Text style={styles.empty}>No expenses in this group</Text>
-      ) : null}
-    </ScreenContainer>
+      <FloatingButton
+        onPress={() => navigation.navigate("AddExpense", { groupId })}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  header: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+  },
+  groupIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.secondary + "18",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
   title: {
-    fontSize: 24,
+    fontSize: fontSize.xxl,
     fontWeight: "700",
     color: colors.text,
   },
-  section: {
-    marginTop: 14,
-    fontSize: 17,
+  memberCount: {
+    color: colors.subtext,
+    fontSize: fontSize.sm,
+    marginTop: 2,
+  },
+  cardRow: {
+    flexDirection: "row",
+    marginVertical: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: fontSize.lg,
     fontWeight: "600",
     color: colors.text,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
-  card: {
-    marginTop: 8,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
-    gap: 6,
-  },
-  expenseTitle: {
-    fontWeight: "700",
-    color: colors.text,
-  },
-  meta: {
-    color: colors.subtext,
-  },
-  empty: {
-    color: colors.subtext,
-    marginTop: 10,
-  },
-  friendRow: {
-    marginTop: 8,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    padding: 12,
+  membersRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  memberChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  memberName: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: "500",
+  },
+  addSection: { marginTop: spacing.sm },
+  friendRow: {
+    flexDirection: "row",
     alignItems: "center",
   },
   friendName: {
+    flex: 1,
+    marginLeft: spacing.md,
+    fontWeight: "500",
     color: colors.text,
-    fontWeight: "600",
+    fontSize: fontSize.md,
   },
-  input: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: "#ffffff",
-    borderRadius: 10,
-    padding: 10,
+  empty: {
+    color: colors.subtext,
+    fontSize: fontSize.sm,
+    textAlign: "center",
+    paddingVertical: spacing.lg,
   },
 });
